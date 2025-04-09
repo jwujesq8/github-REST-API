@@ -1,8 +1,12 @@
 package com.api.dto;
 
-import lombok.Data;
+import lombok.*;
 
-@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
 public class OwnerDto {
     private String login;
 }

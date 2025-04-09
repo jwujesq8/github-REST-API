@@ -1,9 +1,11 @@
 package com.api.dto;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
-@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
 @Builder
 public class ErrorResponseDto {
     private String status;
