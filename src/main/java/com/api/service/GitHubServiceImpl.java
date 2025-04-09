@@ -27,11 +27,8 @@ public class GitHubServiceImpl implements GitHubService {
 
     private final WebClient webClient;
 
-    public GitHubServiceImpl(@Value("${github.api.token}") String GITHUB_API_TOKEN) {
-        this.webClient = WebClient.builder()
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + GITHUB_API_TOKEN)
-                .baseUrl("https://api.github.com")
-                .build();
+    public GitHubServiceImpl(WebClient webClient) {
+        this.webClient = webClient;
     }
 
     public Mono<List<RepositoryInfoResponseDto>> listNonForkReposByUsername(String username) {
