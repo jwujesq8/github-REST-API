@@ -2,40 +2,41 @@ package com.api.service;
 
 import com.api.dto.*;
 import com.api.exception.UserNotFoundException;
-import org.junit.jupiter.api.BeforeAll;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
-import java.net.URI;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 class GitHubServiceTest {
     @Mock
-    private WebClient webClient;
-    @Mock
     private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
     @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersSpec requestHeadersSpecNonFork;
     @Mock
-    private WebClient.ResponseSpec responseSpec;
+    private WebClient.RequestHeadersSpec requestHeadersSpecBranches;
+    @Mock
+    private WebClient.ResponseSpec responseSpecNonFork;
+    @Mock
+    private WebClient.ResponseSpec responseSpecBranches;
+    @Mock
+    private WebClient webClient;
     @InjectMocks
     private GitHubServiceImpl gitHubService;
     private String username;
@@ -77,13 +78,19 @@ class GitHubServiceTest {
     @Test
     void testListNonForkReposByUsername_success() {
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(eq(LIST_REPOS_BY_USERNAME_PATH), eq("user")))
-                .thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.header(eq(HttpHeaders.AUTHORIZATION), eq("Bearer " + "token")))
-                .thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToFlux(RepositoryDto.class)).thenReturn(Flux.just(repoDto));
+        when(requestHeadersUriSpec.uri(any(), eq("user")))
+                .thenReturn(requestHeadersSpecNonFork);
+        when(requestHeadersSpecNonFork.retrieve()).thenReturn(responseSpecNonFork);
+        when(responseSpecNonFork.bodyToFlux(RepositoryDto.class)).thenReturn(Flux.just(repoDto));
 
+        when(requestHeadersUriSpec.uri(any(), eq("user"), eq("repoName")))
+                .thenReturn(requestHeadersSpecBranches);
+        when(requestHeadersSpecBranches.retrieve()).thenReturn(responseSpecBranches);
+        when(responseSpecBranches.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
+
+//        StepVerifier.create(gitHubService.listNonForkReposByUsername("user"))
+//                .expectNextMatches(branch -> "branchName".equals(branchDto.getName()))
+//                .verifyComplete();
         Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(username);
 
         List<RepositoryInfoResponseDto> repos = result.block();
@@ -96,8 +103,8 @@ class GitHubServiceTest {
     void testListNonForkReposByUsername_userNotFound() {
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(eq("/users/{username}/repos"), eq(usernameNotFound))).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToFlux(RepositoryDto.class))
+        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpecNonFork);
+        when(responseSpecNonFork.bodyToFlux(RepositoryDto.class))
                 .thenReturn(Flux.error(new UserNotFoundException(usernameNotFound)));
 
         Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(usernameNotFound);
@@ -110,8 +117,8 @@ class GitHubServiceTest {
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(eq("/repos/{owner}/{repo}/branches"), eq(ownerDto.getLogin()), eq(repoDto.getName())))
                 .thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
+        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpecNonFork);
+        when(responseSpecNonFork.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
 
         Mono<List<BranchDto>> result = gitHubService
                 .listReposBranches(ownerDto.getLogin(), repoDto.getName());
