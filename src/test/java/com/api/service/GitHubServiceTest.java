@@ -4,6 +4,7 @@ import com.api.dto.*;
 import com.api.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -75,55 +76,57 @@ class GitHubServiceTest {
 
     }
 
-    @Test
-    void testListNonForkReposByUsername_success() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(), eq("user")))
-                .thenReturn(requestHeadersSpecNonFork);
-        when(requestHeadersSpecNonFork.retrieve()).thenReturn(responseSpecNonFork);
-        when(responseSpecNonFork.bodyToFlux(RepositoryDto.class)).thenReturn(Flux.just(repoDto));
+    @Nested
+    class testListNonForkReposByUsername{
+        @Test
+        void testListNonForkReposByUsername_success() {
+            when(webClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(eq(LIST_REPOS_BY_USERNAME_PATH), eq("user")))
+                    .thenReturn(requestHeadersSpecNonFork);
+            when(requestHeadersSpecNonFork.retrieve()).thenReturn(responseSpecNonFork);
+            when(responseSpecNonFork.bodyToFlux(RepositoryDto.class)).thenReturn(Flux.just(repoDto));
+            when(requestHeadersUriSpec.uri(any(), eq("user"), eq("repoName")))
+                    .thenReturn(requestHeadersSpecBranches);
+            when(requestHeadersSpecBranches.retrieve()).thenReturn(responseSpecBranches);
+            when(responseSpecBranches.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
 
-        when(requestHeadersUriSpec.uri(any(), eq("user"), eq("repoName")))
-                .thenReturn(requestHeadersSpecBranches);
-        when(requestHeadersSpecBranches.retrieve()).thenReturn(responseSpecBranches);
-        when(responseSpecBranches.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
+            Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(username);
+            List<RepositoryInfoResponseDto> repos = result.block();
 
-//        StepVerifier.create(gitHubService.listNonForkReposByUsername("user"))
-//                .expectNextMatches(branch -> "branchName".equals(branchDto.getName()))
-//                .verifyComplete();
-        Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(username);
+            assertNotNull(repos);
+            assertEquals(1, repos.size());
+            assertEquals("repoName", repos.get(0).getReposName());
+            assertEquals(1, repos.get(0).getBranches().size());
+            assertEquals("branchName", repos.get(0).getBranches().get(0).getName());
+        }
 
-        List<RepositoryInfoResponseDto> repos = result.block();
-        assertNotNull(repos);
-        assertEquals(1, repos.size());
-        assertEquals("repoName", repos.get(0).getReposName());
-    }
+        @Test
+        void testListNonForkReposByUsername_userNotFound() {
+            when(webClient.get()).thenReturn(requestHeadersUriSpec);
+            when(requestHeadersUriSpec.uri(eq(LIST_REPOS_BY_USERNAME_PATH), eq(usernameNotFound)))
+                    .thenReturn(requestHeadersSpecNonFork);
+            when(requestHeadersSpecNonFork.retrieve()).thenReturn(responseSpecNonFork);
+            when(responseSpecNonFork.bodyToFlux(RepositoryDto.class))
+                    .thenReturn(Flux.error(new UserNotFoundException(usernameNotFound)));
 
-    @Test
-    void testListNonForkReposByUsername_userNotFound() {
-        when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(eq("/users/{username}/repos"), eq(usernameNotFound))).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpecNonFork);
-        when(responseSpecNonFork.bodyToFlux(RepositoryDto.class))
-                .thenReturn(Flux.error(new UserNotFoundException(usernameNotFound)));
+            Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(usernameNotFound);
 
-        Mono<List<RepositoryInfoResponseDto>> result = gitHubService.listNonForkReposByUsername(usernameNotFound);
-
-        assertThrows(UserNotFoundException.class, result::block);
+            assertThrows(UserNotFoundException.class, result::block);
+        }
     }
 
     @Test
     void testListReposBranches_success() {
         when(webClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(eq("/repos/{owner}/{repo}/branches"), eq(ownerDto.getLogin()), eq(repoDto.getName())))
-                .thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpecNonFork);
-        when(responseSpecNonFork.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
+        when(requestHeadersUriSpec.uri(eq(LIST_BRANCHES_BY_REPOS_PATH), eq(username), eq(repoDto.getName())))
+                .thenReturn(requestHeadersSpecBranches);
+        when(requestHeadersSpecBranches.retrieve()).thenReturn(responseSpecBranches);
+        when(responseSpecBranches.bodyToFlux(BranchDto.class)).thenReturn(Flux.just(branchDto));
 
         Mono<List<BranchDto>> result = gitHubService
-                .listReposBranches(ownerDto.getLogin(), repoDto.getName());
-
+                .listReposBranches("user", "repoName");
         List<BranchDto> branches = result.block();
+
         assertNotNull(branches);
         assertEquals(1, branches.size());
         assertEquals("branchName", branches.get(0).getName());
