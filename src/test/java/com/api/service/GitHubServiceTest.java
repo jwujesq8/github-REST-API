@@ -41,28 +41,23 @@ class GitHubServiceTest {
     @InjectMocks
     private GitHubServiceImpl gitHubService;
     private String username;
-    private String usernameNotFound;
-    private String login;
     private CommitDto commitDto;
     private RepositoryDto repoDto;
     private OwnerDto ownerDto;
     private BranchDto branchDto;
     @Value("${LIST_REPOS_BY_USERNAME_PATH}")
     private String LIST_REPOS_BY_USERNAME_PATH;
-
     @Value("${LIST_BRANCHES_BY_REPOS_PATH}")
     private String LIST_BRANCHES_BY_REPOS_PATH;
 
     @BeforeEach
     void setUp(){
         username = "user";
-        usernameNotFound = "userNotFound";
-        login = "user@gmail.com";
         commitDto = CommitDto.builder()
                 .sha("commmitSha")
                 .build();
         ownerDto = OwnerDto.builder()
-                .login(login)
+                .login("user@gmail.com")
                 .build();
         repoDto = RepositoryDto.builder()
                 .name("repoName")
@@ -73,13 +68,12 @@ class GitHubServiceTest {
                 .name("branchName")
                 .lastCommit(commitDto)
                 .build();
-
     }
 
     @Nested
     class testListNonForkReposByUsername{
         @Test
-        void testListNonForkReposByUsername_success() {
+        void success() {
             when(webClient.get()).thenReturn(requestHeadersUriSpec);
             when(requestHeadersUriSpec.uri(eq(LIST_REPOS_BY_USERNAME_PATH), eq("user")))
                     .thenReturn(requestHeadersSpecNonFork);
@@ -101,7 +95,9 @@ class GitHubServiceTest {
         }
 
         @Test
-        void testListNonForkReposByUsername_userNotFound() {
+        void userNotFound() {
+
+            String usernameNotFound = "userNotFound";
             when(webClient.get()).thenReturn(requestHeadersUriSpec);
             when(requestHeadersUriSpec.uri(eq(LIST_REPOS_BY_USERNAME_PATH), eq(usernameNotFound)))
                     .thenReturn(requestHeadersSpecNonFork);
