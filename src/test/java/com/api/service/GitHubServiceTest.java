@@ -109,7 +109,7 @@ class GitHubServiceTest {
         }
 
         @Test
-        void ifRepoIsFork_itIsNotInResponse() {
+        void forkRepositoriesAreExcludedFromResponse() {
             RepositoryDto forkRepoDto = RepositoryDto.builder()
                     .name("forkRepoName")
                     .fork(true)

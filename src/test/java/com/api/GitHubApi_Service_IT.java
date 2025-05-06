@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class GitHubServiceIT {
+public class GitHubApi_Service_IT {
 
     @Autowired
     WebTestClient webTestClient;
